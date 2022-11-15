@@ -1,5 +1,6 @@
 # Set env variables
 
+```
 PROJECT_ID=<targetprojectid>
 SHA=sha256:<containersha>
 keyring=<keyring>
@@ -7,6 +8,7 @@ keyname=<keyname>
 REGION=<region>
 REGISTRY_NAME=<registry-name>
 CONTAINER_NAME=<container-name>
+```
 
 # Enable Required Services
 gcloud services enable artifactregistry.googleapis.com
