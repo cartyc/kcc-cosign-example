@@ -11,20 +11,25 @@ CONTAINER_NAME=<container-name>
 ```
 
 # Enable Required Services
+```
 gcloud services enable artifactregistry.googleapis.com
 gcloud services enable cloudbuild.googleapis.com
 gcloud services enable cloudkms.googleapis.com
-
+```
 
 # create keyring 
+```
 gcloud kms keyrings create landing-zone \
     --location northamerica-northeast1
+```
 
 # Create Key
+```
 gcloud kms keys create infra2 \
     --keyring landing-zone \
     --location northamerica-northeast1 \
     --purpose "asymmetric-signing"
+```
 
 # Install Oras and Cosign
 
