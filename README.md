@@ -33,6 +33,14 @@ gcloud kms keys create $KEYNAME \
     --default-algorithm=ec-sign-p256-sha256
 ```
 
+## Create Artifact Registry
+
+```
+gcloud artifacts repositories create ${REGISTRY_NAME} \
+    --repository-format=docker
+```
+
+
 ## Install Oras and Cosign
 
 ```
