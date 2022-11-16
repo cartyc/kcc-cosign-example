@@ -1,37 +1,39 @@
-# Set env variables
+# Signing OCI KCC Artifacts Using `cosign`
+
+## Set env variables
 
 ```
 PROJECT_ID=<targetprojectid>
-SHA=sha256:<containersha>
-keyring=<keyring>
-keyname=<keyname>
+KEYRING=<keyring>
+KEYNAME=<keyname>
 REGION=<region>
 REGISTRY_NAME=<registry-name>
 CONTAINER_NAME=<container-name>
 ```
 
-# Enable Required Services
+## Enable Required Services
 ```
 gcloud services enable artifactregistry.googleapis.com
 gcloud services enable cloudbuild.googleapis.com
 gcloud services enable cloudkms.googleapis.com
 ```
 
-# create keyring 
+## create keyring 
 ```
-gcloud kms keyrings create landing-zone \
-    --location northamerica-northeast1
+gcloud kms keyrings create $KEYRING \
+    --location $REGION
 ```
 
-# Create Key
+## Create Key
 ```
-gcloud kms keys create infra2 \
-    --keyring landing-zone \
+gcloud kms keys create $KEYNAME \
+    --keyring $KEYRING \
     --location northamerica-northeast1 \
-    --purpose "asymmetric-signing"
+    --purpose "asymmetric-signing" \
+    --default-algorithm=ec-sign-p256-sha256
 ```
 
-# Install Oras and Cosign
+## Install Oras and Cosign
 
 ```
 echo "Install Cosign"
@@ -53,21 +55,26 @@ kpt pkg get https://github.com/GoogleCloudPlatform/pubsec-declarative-toolkit.gi
 
 ## Package and publish YAML
 ```
-tar -cf /workspace/example.tar landing-zone
-oras push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REGISTRY_NAME/${CONTAINER_NAME} example.tar
+tar -cf ./example.tar landing-zone
+SHA=$(oras push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REGISTRY_NAME}/${CONTAINER_NAME} example.tar | grep Digest: | cut -f2 -d" ")
 ```
 
 ## Set up Cosign
 gcloud auth application-default login
 
 ```
-cosign generate-key-pair --kms gcpkms://projects/${PROJECT_ID}/locations/${REGION}/keyRings/${KEYRING}/cryptoKeys/${KEYNAME}cosign sign --key gcpkms://projects/${PROJECT_ID}/locations/${REGION}/keyRings/${KEYRING}/cryptoKeys/${KEYNAME} ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REGISTRY_NAME/${CONTAINER_NAME@${SHA}
-cosign verify --key gcpkms://projects/${PROJECT_ID}/locations/${REGION}/keyRings/${keyring}/cryptoKeys/${keyname} ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REGISTRY_NAME}/${CONTAINER_NAME}@${SHA}
+cosign generate-key-pair --kms gcpkms://projects/${PROJECT_ID}/locations/${REGION}/keyRings/${KEYRING}/cryptoKeys/${KEYNAME}
+cosign sign --key gcpkms://projects/${PROJECT_ID}/locations/${REGION}/keyRings/${KEYRING}/cryptoKeys/${KEYNAME} ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REGISTRY_NAME}/${CONTAINER_NAME}@${SHA}
+```
+
+## Verify what was created
+```
+cosign verify --key gcpkms://projects/${PROJECT_ID}/locations/${REGION}/keyRings/${KEYRING}/cryptoKeys/${KEYNAME} ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REGISTRY_NAME}/${CONTAINER_NAME}@${SHA}
 ```
 
 Voilia you've now signed your KCC infra with cosign!
 
-# Set Up Cosign and Cloud Build
+## Set Up Cosign and Cloud Build
 
 Cloud Build Permissions
 Key verifier/signer
