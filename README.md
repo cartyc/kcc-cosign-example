@@ -37,7 +37,8 @@ gcloud kms keys create $KEYNAME \
 
 ```
 gcloud artifacts repositories create ${REGISTRY_NAME} \
-    --repository-format=docker
+    --repository-format=docker \
+    --location $REGION
 ```
 
 
@@ -56,14 +57,58 @@ mv oras-install/oras /usr/local/bin/
 rm -rf oras_0.16.0_*.tar.gz oras-install/
 ```
 
-Get some YAML
+##  Create some YAML and tar it
+
 ```
-kpt pkg get https://github.com/GoogleCloudPlatform/pubsec-declarative-toolkit.git/solutions/landing-zone landing-zone
+cat <<EOF > ./gke.yaml
+apiVersion: container.cnrm.cloud.google.com/v1beta1
+kind: ContainerCluster
+metadata:
+  name: na-ne1
+spec:
+  description: An autopilot cluster.
+  enableAutopilot: true
+  location: $REGION
+  releaseChannel:
+    channel: REGULAR
+---
+apiVersion: gkehub.cnrm.cloud.google.com/v1beta1
+kind: GKEHubFeatureMembership
+metadata:
+  name: na-ne1-mesh-membership
+spec:
+  projectRef:
+    external: $PROJECT_ID
+  location: global
+  membershipRef:
+    name: na-ne1-hub
+  featureRef:
+    name: servicemesh
+  mesh:
+    management: MANAGEMENT_AUTOMATIC
+---
+apiVersion: gkehub.cnrm.cloud.google.com/v1beta1
+kind: GKEHubMembership
+metadata:
+  name: na-ne1-hub
+spec:
+  location: global
+  authority:
+    issuer: 'https://container.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/clusters/na-ne1'
+  description: na-ne1 Cluster
+  endpoint:
+    gkeCluster:
+      resourceRef:
+        name: na-ne1
+EOF
+```
+
+```
+tar -cf ./example.tar gke.yaml
 ```
 
 ## Package and publish YAML
 ```
-tar -cf ./example.tar landing-zone
 SHA=$(oras push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REGISTRY_NAME}/${CONTAINER_NAME} example.tar | grep Digest: | cut -f2 -d" ")
 ```
 
